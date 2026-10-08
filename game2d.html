@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Police & Thieves: Lagos</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e6ebee;--card:#fff;--ink:#13202b;--mut:#5d6b76;--line:#cdd6dc;--y:#f2b705;--yi:#13202b;--g:#1f9d63;--r:#d64545;--b:#3a7bd5;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e171e;--card:#18242e;--ink:#eef2f5;--mut:#98a6b1;--line:#2b3a46}}
+:root[data-theme="dark"]{--bg:#0e171e;--card:#18242e;--ink:#eef2f5;--mut:#98a6b1;--line:#2b3a46}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Archivo,system-ui,sans-serif;font-size:16px;line-height:1.4}
+*{box-sizing:border-box}
+.stripe{height:10px;background:repeating-linear-gradient(135deg,#13202b 0 14px,#f2b705 14px 28px)}
+main{max-width:520px;margin:0 auto;padding:12px 14px 40px}
+h1{font-weight:900;font-size:34px;line-height:1.02;margin:18px 0 8px;letter-spacing:-.5px}
+h2{font-size:18px;font-weight:900;margin:16px 0 6px}
+p{margin:6px 0}.mut{color:var(--mut);font-size:14px}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.cash{font-weight:900;font-size:22px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+.stat{font-size:12px;color:var(--mut)}
+.bar{height:7px;background:var(--line);border-radius:4px;margin-top:3px;overflow:hidden}.bar i{display:block;height:100%}
+.tabs{display:flex;gap:6px;margin:10px 0}
+.tab{flex:1;padding:9px;border:2px solid var(--ink);background:transparent;color:var(--ink);font:700 14px Archivo,system-ui,sans-serif;border-radius:8px}
+.tab.on{background:var(--y);color:var(--yi);border-color:var(--yi)}
+.btn{display:block;width:100%;text-align:left;padding:12px 14px;margin:6px 0;border:2px solid var(--ink);border-radius:10px;background:var(--card);color:var(--ink);font:700 15px Archivo,system-ui,sans-serif;cursor:pointer}
+.btn small{display:block;font-weight:400;color:var(--mut);font-size:12px}
+.btn.pri{background:var(--y);color:var(--yi);border-color:var(--yi)}
+.btn:disabled{opacity:.4}
+.btn:focus-visible,.tab:focus-visible,.chip:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+.feed{background:var(--card);border-left:6px solid var(--y);border-radius:6px;padding:8px 12px;margin:8px 0;font-size:14px}
+.feed div{padding:3px 0;border-bottom:1px solid var(--line)}.feed div:last-child{border:0}.feed div:first-child{font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:8px 10px;border:2px solid var(--ink);border-radius:20px;background:transparent;color:var(--ink);font:700 13px Archivo,system-ui,sans-serif}
+.chip.on{background:var(--ink);color:var(--bg)}
+.role{font-size:46px;font-weight:900;line-height:1;margin:20px 0}
+.card{background:var(--card);border-radius:10px;padding:10px 12px;margin:8px 0}
+.alert{background:var(--r);color:#fff;border-radius:10px;padding:12px 14px;font-weight:700;margin:10px 0}
+.bob{animation:bob .35s infinite alternate}@keyframes bob{to{transform:translateY(-4px)}}
+.lg1,.lg2,.ar1,.ar2{transform-box:fill-box;transform-origin:50% 0}
+.lg1,.ar2{animation:sw .35s infinite alternate}.lg2,.ar1{animation:sw .35s infinite alternate-reverse}
+@keyframes sw{from{transform:rotate(-38deg)}to{transform:rotate(38deg)}}
+.road{animation:rd .45s linear infinite}@keyframes rd{to{stroke-dashoffset:-26}}
+.sir{animation:sr .4s infinite}@keyframes sr{0%{fill:#d64545}50%{fill:#3a7bd5}100%{fill:#d64545}}
+.fl{animation:fl .2s infinite alternate}@keyframes fl{to{opacity:.1}}
+@media(prefers-reduced-motion:reduce){.bob,.lg1,.lg2,.ar1,.ar2,.road,.sir,.fl{animation:none}}
+</style></head>
+<body><div class="stripe"></div><main id="app"></main>
+<script>
+const $=s=>document.querySelector(s),R=(a,b)=>a+Math.floor(Math.random()*(b-a+1)),P=p=>Math.random()<p,cl=(v,a=0,b=100)=>Math.max(a,Math.min(b,v)),N=n=>"₦"+Math.round(n).toLocaleString(),pick=a=>a[R(0,a.length-1)];
+const KEY="pt_lagos_v1";let S=null,scr="draw",tab="do",ch=null,robT=-1,chant="";
+const RIDES={walk:{n:"Walk",f:0,s:0},danfo:{n:"Danfo",f:300,s:0},okada:{n:"Okada",f:600,s:3},keke:{n:"Keke",f:500,s:1},car:{n:"Car",f:1500,s:4}};
+const NAMES=["Tunde","Ngozi","Kemi","Emeka","Bisi","Chidi","Aisha","Femi","Ifeoma","Segun","Amaka","Yusuf"];
+const JOBS=["Market trader","Danfo driver","Student"],SLOTS=["Morning","Afternoon","Night"];
+const PAY={"Market trader":[2500,5000,8],"Danfo driver":[3000,6000,10],"Student":[1500,3000,5],"hustle":[1500,3500,8]};
+const TG=[["Provision shop",40000,120000,.3],["Fuel station",150000,400000,.45],["Mansion in Lekki",400000,1200000,.6],["Bank van",800000,2000000,.72]];
+const ST=[["Careful",-.15,.6],["Normal",0,1],["Bold",.15,1.5]];
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function load(){try{const d=localStorage.getItem(KEY);return d?JSON.parse(d):null}catch(e){return null}}
+function L(m){S.log.unshift(m);S.log.length=Math.min(S.log.length,8)}
+function C(k,d){S[k]=cl(S[k]+d)}
+function famAll(d){S.fam.forEach(f=>f.t=cl(f.t+d))}
+function mk(prev){const r=Math.random(),role=r<.2?"thief":r<.4?"police":"civilian";
+ return{name:pick(NAMES),role,job:role=="civilian"?pick(JOBS):"",day:prev?prev.day:1,slot:0,cash:prev?Math.floor(Math.max(0,prev.cash)*.3):10000,stress:20,health:100,heat:role=="civilian"?0:10,ride:"walk",car:false,jail:0,fuel:0,nowork:0,crime:prev?prev.crime:40,trust:prev?prev.trust:50,gen:prev?prev.gen+1:1,dead:"",
+ fam:[{n:"Mama",rel:"Mother",t:70},{n:pick(NAMES),rel:"Sibling",t:60},{n:pick(NAMES),rel:"Spouse",t:55}],log:[]}}
+function draw(prev){scr="drawing";chant="";render();const w=["mini","mini","manimo","...","you are"];w.forEach((x,i)=>setTimeout(()=>{chant+=x+" ";render()},i*550));
+ setTimeout(()=>{S=mk(prev);const t={thief:"Street life. Money is quick, and so are sirens.",police:"You wear the uniform. Everybody expects something from you.",civilian:"Rent is due every 7th day. Make ends meet."};L(t[S.role]);if(prev)L("You inherited "+N(S.cash)+" from "+prev.name+".");scr="reveal";save();render()},w.length*550+300)}
+function roleName(){return S.role=="thief"?"Thief":S.role=="police"?"Police officer":S.job}
+function bar(v,c){return`<div class="bar"><i style="width:${cl(v)}%;background:${c}"></i></div>`}
+function fare(){const f=RIDES[S.ride].f*(S.fuel>0?2:1);S.cash-=f;return f}
+function advance(){if(S.health<=0&&!S.dead)S.dead="You did not survive.";if(S.dead){scr="dead";save();return}
+ if(S.role=="police"&&S.heat>=100){S.role="civilian";S.job="Market trader";S.jail=8;L("You were caught taking bribes. Dismissed and jailed 8 days.");S.heat=0}
+ S.slot++;if(S.slot>=3)endDay();if(S.health<=0&&!S.dead)S.dead="You did not survive.";if(S.dead)scr="dead";save()}
+function go(fn){fn();if(ch)scr="chase";else advance();render()}
+function endDay(){S.slot=0;S.day++;S.nowork=Math.max(0,S.nowork-1);S.fuel=Math.max(0,S.fuel-1);
+ if(S.cash>=2000)S.cash-=2000;else{S.cash=0;C("stress",10);S.health-=8;L("You slept hungry. (-8 health)")}
+ if(S.day%7==0){if(S.cash>=25000){S.cash-=25000;L("Rent paid: "+N(25000)+".")}else{S.cash=0;C("stress",25);S.health-=5;L("No rent. The landlord is threatening you.")}}
+ S.heat=cl(S.heat-(S.role=="thief"?3:2));if(S.stress>=90){S.health-=8;L("Stress is wearing you down. (-8 health)")}
+ if(S.fam.reduce((a,f)=>a+f.t,0)/S.fam.length<30)C("stress",4);
+ if(P(.3)){const e=R(1,4);if(e==1){S.fuel=3;L("Fuel scarcity. Fares double for 3 days.")}else if(e==2){C("stress",5);L("NEPA took light. Hot, dark night.")}else if(e==3){S.nowork=1;L("Strike today. Many jobs are shut.")}else{S.cash+=5000;L("An aunty sent you "+N(5000)+".")}}
+ if(P(.5)){const f=pick(S.fam);L(S.role=="thief"&&f.t<50?`${f.n}: "People are talking about you. Please stop."`:f.t<30?`${f.n} is not picking your calls.`:S.cash<5000&&f.t>=50?`${f.n}: "Things are hard? Ask me for help."`:`${f.n} says hi.`)}
+ if(S.role=="thief"&&S.heat>=70&&P(.5)){L("Police raid your hideout at dawn!");startChase("thief",0,true)}}
+function jailUp(loot,why){let d=cl(Math.round(2+loot/120000),2,14);const f=S.fam.find(x=>x.t>=50);if(f){d=Math.ceil(d/2);f.t-=5;L(f.n+" paid a lawyer. Sentence halved.")}S.jail=d;S.cash=Math.floor(S.cash*.8);S.heat=cl(S.heat-20);C("stress",15);L(why+" Jail: "+d+" days.")}
+function hurt(n,why){S.health-=n;L(why+" (-"+n+" health)");if(S.health<=0)S.dead=why}
+function startChase(role,loot,raid){ch={role,loot,raid,ty:role=="police"?pick(["surr","run","run","gun"]):""};scr="chase"}
+function endChase(){const r=ch.raid;ch=null;scr="game";if(!r)advance();else save();render()}
+function thiefAct(c){const L0=ch.loot,sp=RIDES[S.ride].s;
+ if(c=="surr"){if(P(.08))hurt(20,"A panicked officer fired.");if(!S.dead)jailUp(L0,"You surrendered.")}
+ else if(c=="run"){if(P(.25+sp*.12-S.heat*.002)){S.cash+=L0;C("heat",15);L("You lost them in the Mushin backstreets"+(L0?". Loot kept: "+N(L0):"")+".")}
+  else{if(P(.45))hurt(R(20,40),"They shot you as you ran.");if(!S.dead)jailUp(L0,"Caught.")}}
+ else{if(P(.3-S.heat*.001)){S.cash+=L0;C("heat",30);C("crime",5);C("trust",-5);L("You won the shootout and vanished. An officer is wounded.")}
+  else{hurt(R(30,60),"You lost the shootout.");if(!S.dead)jailUp(L0,"Captured.")}}
+ endChase()}
+function win(){S.cash+=R(20000,50000);C("crime",-3);C("trust",3);C("stress",5);L("Arrest made. Bonus paid.")}
+function policeAct(c){const t=ch.ty;
+ if(c=="stop"){C("crime",2);L("You called off the chase. The suspect is gone.")}
+ else if(c=="arrest"){if(t=="surr"||(t=="run"&&P(.35))||(t=="gun"&&P(.2)))win();else if(t=="gun")hurt(R(15,35),"He shot you as you moved in.");else L("He slipped into the crowd.")}
+ else if(t=="surr"){C("trust",-15);C("heat",30);famAll(-8);C("stress",20);L("You shot a man with raised hands. The video is everywhere.")}
+ else if(P(.55)){if(P(.4)){C("trust",-8);C("heat",15);famAll(-5);C("stress",15);L("Suspect killed. There will be an inquiry.")}else win()}
+ else{L("You missed.");if(t=="gun"&&P(.5))hurt(R(15,35),"He fired back.")}
+ endChase()}
+function doRob(ti,si){const t=TG[ti],s=ST[si];fare();let loot=R(t[1],t[2])*s[2],risk=cl(t[3]+s[1]+S.heat*.003-RIDES[S.ride].s*.04,.05,.95);C("stress",10);
+ if(!P(risk)){L("Job done at "+t[0]+": "+N(loot)+".");if(P(.15+S.heat/400)){L("You are being tailed!");startChase("thief",loot)}else{S.cash+=loot;C("heat",10+t[3]*20);C("crime",3);S.fam.forEach(f=>f.t=cl(f.t+(f.rel=="Sibling"?2:-5)))}}
+ else{L("The "+t[0]+" job went wrong. Alarm!");S.fam.forEach(f=>f.t=cl(f.t-3));startChase("thief",Math.round(loot*.5))}scr="game"}
+function work(){if(S.nowork&&S.role=="civilian")return L("Strike. No work today.");const p=PAY[S.role=="civilian"?S.job:"hustle"];fare();let m=R(p[0],p[1]);if(S.job=="Danfo driver"&&S.fuel>0)m=Math.round(m/2);S.cash+=m;C("stress",p[2]);L("Earned "+N(m)+".")}
+function leisure(k){const o={club:[15000,-25,"You spent a night at the club."],beach:[2000,-15,"Fresh air at Elegushi beach."],cinema:[5000,-12,"Cinema night."]}[k];S.cash-=o[0];fare();C("stress",o[1]);if(k=="beach")S.health=cl(S.health+5);
+ if(k=="club"&&S.role=="thief"){C("heat",8);L("People noticed you flashing cash. (+8 heat)")}
+ if(k=="cinema"){const f=pick(S.fam);f.t=cl(f.t+6);L("You took "+f.n+" to the cinema. Trust up.")}else L(o[2])}
+const ACT={work,patrol(){S.cash+=R(5000,9000);fare();C("stress",6);L("Patrol pay received.");if(P(.35)){L("A robbery report comes in!");startChase("police",0)}},
+ bribe(){S.cash+=R(20000,60000);C("heat",8);C("trust",-1);L("You took a bribe.");if(P(.2)){C("heat",25);L("A colleague noticed. (+25 probe)")}},
+ invest(){fare();C("stress",4);if(P(.5)){win();L("Your investigation led to a break.")}else L("Dead end.")},
+ lay(){C("heat",-15);C("stress",-5);L("You laid low.")},rest(){C("stress",-12);S.health=cl(S.health+5);L("You rested at home.")}};
+function act(k){go(()=>ACT[k]())}
+function setRide(k){if(k=="car"&&!S.car){if(S.cash<3500000)return;S.cash-=3500000;S.car=true;L("You bought a car!")}S.ride=k;render()}
+function give(i){const f=S.fam[i];if(S.cash<5000)return;S.cash-=5000;f.t=cl(f.t+8);L("You sent "+f.n+" "+N(5000)+".");render()}
+function ask(i){const f=S.fam[i];if(f.t<50)return;S.cash+=8000;f.t-=5;L(f.n+" gave you "+N(8000)+".");render()}
+function serve(){S.jail--;S.day++;C("stress",-3);L(S.jail?"Another day in the cell.":"You are free.");save();render()}
+function startOver(){try{localStorage.removeItem(KEY)}catch(e){}S=null;scr="draw";render()}
+function btn(t,s,f,o){return`<button class="btn ${o&&o.p?"pri":""}" ${o&&o.d?"disabled":""} onclick="${f}">${t}${s?`<small>${s}</small>`:""}</button>`}
+function fig(x,st,p,fl){const c={thief:"#2b2b33",police:"#2d5fb0",civ:"#e08a2e"}[st],run=p=="run",aim=p=="shoot"||p=="face"||p=="gun",up=p=="surr",k=`stroke="${c}" stroke-linecap="round"`;
+return`<g transform="translate(${x},0) scale(${fl?-1:1},1)"><g class="${run?"bob":""}"><line class="${run?"lg1":""}" x1="0" y1="75" x2="0" y2="105" ${k} stroke-width="7"/><line class="${run?"lg2":""}" x1="0" y1="75" x2="0" y2="105" ${k} stroke-width="7" opacity=".7"/><line x1="0" y1="48" x2="0" y2="76" ${k} stroke-width="13"/>`+
+(up?`<line x1="0" y1="52" x2="-15" y2="28" ${k} stroke-width="5"/><line x1="0" y1="52" x2="15" y2="28" ${k} stroke-width="5"/>`:aim?`<line x1="0" y1="56" x2="24" y2="56" ${k} stroke-width="5"/><rect x="24" y="52" width="10" height="5" fill="#111"/><circle class="fl" cx="40" cy="55" r="5" fill="#f2b705"/>`:`<line class="${run?"ar1":""}" x1="0" y1="52" x2="0" y2="72" ${k} stroke-width="5"/><line class="${run?"ar2":""}" x1="0" y1="52" x2="0" y2="72" ${k} stroke-width="5"/>`)+
+`<circle cx="0" cy="36" r="10" fill="#d9a279"/>`+(st=="thief"?`<rect x="-10" y="33" width="20" height="5" fill="#111"/>`:st=="police"?`<rect x="-11" y="24" width="22" height="7" fill="#1a3a73"/><rect class="sir" x="-5" y="18" width="10" height="5" fill="#d64545"/>`:"")+`</g></g>`}
+function sc(it,vb,go){return`<svg viewBox="${vb||"0 0 320 120"}" style="width:100%;background:var(--card);border-radius:10px" role="img" aria-label="Animated street scene"><line class="${go?"road":""}" x1="0" y1="108" x2="320" y2="108" stroke="var(--mut)" stroke-width="3" stroke-dasharray="14 12"/>${it}</svg>`}
+function mini(){const st=S.role=="thief"?"thief":S.role=="police"?"police":"civ",j=S.jail>0;return sc(fig(160,st,j?"idle":"run")+(j?[110,135,160,185,210].map(x=>`<line x1="${x}" y1="20" x2="${x}" y2="112" stroke="var(--ink)" stroke-width="4"/>`).join(""):""),"0 20 320 95",!j)}
+function chaseScene(thief){const p=ch.pose,t=ch.ty;let a,b,fa=0;
+ if(thief){a=p=="surr"?"surr":p=="face"?"face":"run";b=p=="face"?"shoot":p=="surr"?"idle":"run"}
+ else{a=p=="stop"?"run":t=="surr"?"surr":t=="gun"?"gun":"run";b=p=="arrest"?"run":p=="shoot"?"shoot":p?"idle":t=="surr"?"idle":"run"}
+ fa=a=="face"||a=="gun";return sc(fig(240,"thief",a,fa)+fig(90,"police",b),"",a=="run"||b=="run")}
+function cd(w,c){if(ch.busy)return;ch.busy=1;ch.pose=c;render();setTimeout(()=>w=="t"?thiefAct(c):policeAct(c),1100)}
+function render(){const A=$("#app");let h="";
+ if(scr=="draw"){const sv=load();h=`<h1>Police &amp; Thieves<br>Lagos</h1><p class="mut">You do not choose who you become. Draw your role and live the life you get.</p>`+btn("Draw my role","Mini mini manimo","draw()",{p:1})+(sv&&!sv.dead?btn("Continue saved life",sv.name+", day "+sv.day,"S=load();scr='game';render()"):"")}
+ else if(scr=="drawing")h=`<div class="role">${chant}</div>`;
+ else if(scr=="reveal")h=`<p class="mut">You drew</p>${mini()}<div class="role">${roleName()}</div><p>${S.name}. ${S.log[S.log.length-1]||""}</p>`+btn("Start this life","","scr='game';render()",{p:1});
+ else if(scr=="dead")h=`<h1>${S.name} is gone</h1><p>${S.dead} You lasted ${S.day} days.</p><p class="mut">${S.fam[1].n} carries on. A new draw decides what they become. They inherit 30% of your cash.</p>`+btn("Continue as "+S.fam[1].n,"","draw(S)",{p:1});
+ else if(scr=="chase"){const th=ch.role=="thief";h=chaseScene(th)+`<div class="alert">${th?"Sirens behind you. Police are chasing you"+(ch.loot?" with "+N(ch.loot)+" in the bag":"")+".":{surr:"The suspect has raised his hands.",run:"The suspect is running through the traffic.",gun:"The suspect has pulled a gun."}[ch.ty]}</div>`+
+  (th?`<p class="mut">Your ride: ${RIDES[S.ride].n}. Health ${S.health}.</p>`+btn("Surrender","Lose the loot, face jail","cd('t','surr')")+btn("Escape","Depends on your ride and heat","cd('t','run')")+btn("Face the police","Risky shootout","cd('t','face')")
+  :`<p class="mut">Health ${S.health}. Police trust in the city: ${S.trust}.</p>`+btn("Arrest","Works best on a surrender","cd('p','arrest')")+btn("Shoot","Can end a life","cd('p','shoot')")+btn("Stop the chase","Let him go","cd('p','stop')"))}
+ else if(scr=="rob"){h=`<h2>${robT<0?"Pick a target":TG[robT][0]}</h2>`+(robT<0?TG.map((t,i)=>btn(t[0],N(t[1])+" to "+N(t[2])+", risk "+Math.round(t[3]*100)+"%","robT="+i+";render()")).join(""):ST.map((s,i)=>btn(s[0],i==0?"Lower risk, smaller take":i==2?"Higher risk, bigger take":"Balanced","go(()=>doRob("+robT+","+i+"));robT=-1")).join(""))+btn("Back","","robT=-1;scr='game';render()")}
+ else{h=head()+(S.jail>0?`<div class="alert">You are in jail. ${S.jail} days left.</div>`+btn("Serve a day","","serve()",{p:1}):"")+tabs();
+  if(tab=="do"&&!S.jail)h+=doTab();else if(tab=="fam")h+=famTab();else if(tab=="city")h+=cityTab();h+=feed()}
+ A.innerHTML=h;if(scr=="game")save()}
+function head(){const pl=S.role!="civilian";return mini()+`<div class="top"><div><b>${S.name}</b><div class="mut">${roleName()}, day ${S.day}, ${SLOTS[S.slot]}</div></div><div class="cash">${N(S.cash)}</div></div>
+<div class="stats"><div class="stat">Stress${bar(S.stress,"var(--y)")}</div><div class="stat">Health${bar(S.health,"var(--g)")}</div>${pl?`<div class="stat">${S.role=="police"?"Probe":"Heat"}${bar(S.heat,"var(--r)")}</div>`:"<div></div>"}</div>`}
+function tabs(){return`<div class="tabs">${[["do","Do"],["fam","Family"],["city","City"]].map(t=>`<button class="tab ${tab==t[0]?"on":""}" onclick="tab='${t[0]}';render()">${t[1]}</button>`).join("")}</div>`}
+function feed(){return`<div class="feed">${S.log.map(x=>`<div>${x}</div>`).join("")}</div>`}
+function doTab(){let h="";const r=S.role;
+ if(r=="civilian")h+=btn("Work as "+S.job.toLowerCase(),"Slow money. Rent is "+N(25000)+" every 7 days","act('work')");
+ if(r=="thief")h+=btn("Plan a robbery","Choose a target and how bold to be","scr='rob';robT=-1;render()",{p:1})+btn("Street hustle","Small, safer money","act('work')")+btn("Lay low","Heat goes down","act('lay')");
+ if(r=="police")h+=btn("Go on patrol","Salary, and a chance of a chase","act('patrol')",{p:1})+btn("Investigate a case","Bonus if you crack it","act('invest')")+btn("Take a bribe","Quick cash, probe rises","act('bribe')");
+ h+="<h2>Leisure</h2>"+btn("Club "+N(15000),"Stress down. Thieves attract attention","go(()=>leisure('club'))",{d:S.cash<15000})+btn("Beach "+N(2000),"Cheap relaxation","go(()=>leisure('beach'))",{d:S.cash<2000})+btn("Cinema "+N(5000),"Take family. Trust up","go(()=>leisure('cinema'))",{d:S.cash<5000})+btn("Rest at home","Free","act('rest')");
+ h+="<h2>Ride</h2><div class=\"chips\">"+Object.keys(RIDES).map(k=>`<button class="chip ${S.ride==k?"on":""}" onclick="setRide('${k}')">${RIDES[k].n} ${k=="car"&&!S.car?N(3500000):N(RIDES[k].f*(S.fuel>0?2:1))}</button>`).join("")+"</div><p class=\"mut\">Fast rides help getaways. Fare is charged each outing.</p>";return h}
+function famTab(){return S.fam.map((f,i)=>`<div class="card"><b>${f.n}</b> <span class="mut">${f.rel}</span> ${bar(f.t,f.t<30?"var(--r)":"var(--g)")}<p class="mut">${f.t<30?"Barely speaking to you.":f.t<55?"Worried about you.":"Supports you."}</p>${btn("Send "+N(5000),"Trust up","give("+i+")",{d:S.cash<5000})}${btn("Ask for help","Needs trust of 50 or more. Gives "+N(8000),"ask("+i+")",{d:f.t<50})}</div>`).join("")+`<p class="mut">Family can pay lawyers when you are jailed. Crime and shame hurt trust.</p>`}
+function cityTab(){return`<div class="card">Crime level${bar(S.crime,"var(--r)")}</div><div class="card">Trust in police${bar(S.trust,"var(--b)")}</div><p class="mut">Crime rises when thieves win and falls when police make arrests. Generation ${S.gen}.</p>`+btn("Start over","Deletes your save","startOver()")}
+render();
+</script></body></html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Police & Thieves 3D: Lagos</title>
+<style>
+:root{--bg:#0b1530;--ink:#fff;--y:#f2b705;--r:#d64545;--g:#1f9d63}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1530}}
+:root[data-theme="dark"]{--bg:#0b1530}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+.hud{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 0;display:flex;gap:8px;align-items:flex-start;pointer-events:none}
+.pill{background:rgba(10,18,32,.72);padding:6px 10px;border-radius:10px;font-weight:800;font-size:14px}
+.bar{height:6px;width:70px;background:#334;border-radius:3px;margin-top:4px;overflow:hidden}.bar i{display:block;height:100%;background:var(--g)}
+#toast{position:fixed;top:calc(env(safe-area-inset-top,0px) + 112px);left:50%;transform:translateX(-50%);background:rgba(10,18,32,.85);border-left:5px solid var(--y);padding:8px 14px;border-radius:8px;font-weight:700;max-width:86%;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none}
+#wanted{display:none;background:var(--r)}
+#joy{position:fixed;left:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.35)}
+#knob{position:absolute;left:41px;top:41px;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.6)}
+.btns{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);display:flex;flex-direction:column;gap:12px;align-items:flex-end}
+.b{border:0;border-radius:50%;width:76px;height:76px;font:800 14px system-ui,sans-serif;background:rgba(255,255,255,.85);color:#13202b}
+#act{display:none;border-radius:16px;width:auto;min-width:120px;padding:0 14px;height:56px;background:var(--y)}
+.b.s{width:96px;height:40px;border-radius:12px;font-size:13px}
+.b:focus-visible{outline:3px solid #6aa7ff}
+#start{position:fixed;inset:0;background:rgba(8,14,28,.92);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;gap:10px}
+#start h1{font-size:34px;margin:0;font-weight:900}#start p{max-width:340px;margin:0;color:#c9d3df;font-size:15px}
+#go{margin-top:12px;border:0;border-radius:12px;padding:14px 28px;background:var(--y);color:#13202b;font:900 18px system-ui,sans-serif}
+#obj{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 60px);max-width:62%;font-size:12px;border-left:4px solid var(--y);pointer-events:none}
+#dlg{position:fixed;inset:0;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.4);z-index:5;padding:0 12px calc(env(safe-area-inset-bottom,0px) + 14px)}
+.box{background:#101a2b;border-top:5px solid var(--y);border-radius:14px;padding:14px 16px;max-width:460px;width:100%}.box b{color:var(--y)}.box p{margin:6px 0 10px;line-height:1.4}
+#dch button{display:block;width:100%;margin:6px 0;padding:12px;border:0;border-radius:10px;background:var(--y);color:#13202b;font:800 15px system-ui,sans-serif;text-align:left}
+</style></head>
+<body>
+<div class="hud"><div class="pill" id="cash"></div><div class="pill">Stress<div class="bar"><i id="st" style="background:var(--y)"></i></div></div><div class="pill">Stamina<div class="bar"><i id="sp"></i></div></div><div class="pill" id="wanted"></div></div>
+<div id="toast"></div><div class="pill" id="obj"></div>
+<div id="joy"><div id="knob"></div></div>
+<div class="btns"><button class="b" id="act"></button><button class="b s" id="rf">Open roofs</button><button class="b s" id="zm">Zoom</button><button class="b" id="run">Run</button></div>
+<div id="start"><h1>Police &amp; Thieves 3D</h1><p>A Lagos street prototype. Walk with the stick. Hold Run to sprint. Walk into a glowing ring to use it. Roofs lift as you get close, so you can see inside.</p><p>Follow the story. Enter the blue car to drive. Ride the yellow danfo from the stops. Rob the bank and survive the chase.</p><button id="go">Draw my role</button></div>
+<div id="dlg"><div class="box"><b id="dsp"></b><p id="dtx"></p><div id="dch"></div></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=s=>document.querySelector(s),R=(a,b)=>a+Math.random()*(b-a),N=n=>"₦"+Math.round(n).toLocaleString();
+if(typeof THREE==="undefined"){$("#start").innerHTML="<h1>3D engine failed to load</h1><p>Check your connection and reload.</p>"}else{
+const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,320);
+const rd=new THREE.WebGLRenderer({antialias:true});rd.setPixelRatio(Math.min(devicePixelRatio,2));rd.setSize(innerWidth,innerHeight);document.body.prepend(rd.domElement);
+scene.fog=new THREE.Fog(0x8fd0ff,120,300);
+const hemi=new THREE.HemisphereLight(0xffffff,0x556655,.8),sun=new THREE.DirectionalLight(0xffffff,.8);sun.position.set(40,80,30);scene.add(hemi,sun);
+const M=(c,e)=>new THREE.MeshLambertMaterial({color:c,emissive:e||0});
+function box(w,h,d,c,x,y,z,e){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,e));m.position.set(x,y,z);scene.add(m);return m}
+const obs=[],roofs=[],npcs=[],SH=[0xe74c3c,0x3498db,0xf1c40f,0x9b59b6,0x1abc9c,0xecf0f1,0xe67e22,0x2ecc71];
+function bld(x,z,w,d,h,c,e,type){h=h||R(5.5,8);type=type||["home","shop","office","eatery"][Math.floor(R(0,4))];
+const sd=z<0?1:-1,t=.5,zD=z+sd*d/2,zB=z-sd*d/2,rc=()=>SH[Math.floor(R(0,8))];
+const wall=(wx,wz,a,k)=>{box(a,h,k,c,wx,h/2,wz,e);obs.push({x:wx,z:wz,hw:a/2,hd:k/2})};
+wall(x,zB,w,t);wall(x-(w/4+1.25),zD,w/2-2.5,t);wall(x+(w/4+1.25),zD,w/2-2.5,t);wall(x-w/2,z,t,d);wall(x+w/2,z,t,d);
+box(w,.15,d,{home:0xc8a97a,shop:0xdcdcdc,office:0x9fb0c0,eatery:0xe8d9b0,bank:0xd8d2c0,club:0x1a1030}[type],x,.08,z);
+const rf=box(w+.8,.5,d+.8,e?0x2a1a44:0x7a4a3a,x,h+.25,z);roofs.push({m:rf,x,z,hw:w/2,hd:d/2,h});
+const f=(dx,dz,a,b,k,col,em)=>{dz*=sd;box(a,b,k,col,x+dx,b/2+.1,z+dz,em);if(b>.4)obs.push({x:x+dx,z:z+dz,hw:a/2,hd:k/2})};
+const sp=(dx,dz,sh,k)=>{const g=human(sh,0x2a3140,false);g.position.set(x+dx,.1,z+dz*sd);g.rotation.y=R(0,6.28);npcs.push({g,k:k||"idle",ph:R(0,6)})};
+if(type=="home"){f(-3,-3.8,3,.7,4,0xcfd8e8);f(3,-4,4,.9,1.4,0x7a4aa8);f(3,-5.3,2.5,1.4,.3,0x111111);f(-2,2,2.2,.8,2.2,0x8b5a2b);f(3,0,3,.06,3,0xc96f5a);sp(0,0,rc())}
+else if(type=="shop"){for(const q of[-3.5,0,3.5]){f(q,-3,.8,2.4,6,0x9b7b4a);f(q,-3,.9,.5,5.6,0xe74c3c)}f(0,3,6,1.1,1.2,0x6b4a2b);sp(0,4.2,rc());sp(-3,1,rc())}
+else if(type=="office"){f(-3,-2,3,.9,1.6,0x9b8b6a);f(3,-2,3,.9,1.6,0x9b8b6a);f(-3,-2.7,1,.7,.2,0x111111);f(3,-2.7,1,.7,.2,0x111111);f(0,-4.8,6,2,.8,0x8a8f99);sp(-3,-.5,rc());sp(3,-.5,rc())}
+else if(type=="eatery"){f(-3,-1,1.8,.9,1.8,0xeee6d0);f(3,-1,1.8,.9,1.8,0xeee6d0);f(0,2.5,1.8,.9,1.8,0xeee6d0);f(0,-4.8,8,1.1,1.2,0xb0b5ba);f(-2,-4.8,1.2,1.4,1,0x333333);sp(1,-3.6,0xffffff);sp(3,.5,rc())}
+else if(type=="bank"){f(0,-1.5,9,1.2,1.2,0x6b4a2b);f(0,-4.6,5,3.5,2.2,0x555a63);f(0,-3.4,2.2,2.6,.2,0xf2b705,0x332200);f(-4.5,-4.8,1.2,.6,.8,0xf2b705,0x553300);f(-4,3.6,3,.6,1,0x335577);f(4,3.6,3,.6,1,0x335577);sp(-2.5,-2.8,0xffffff);sp(2.5,-2.8,0xffffff);sp(3.5,4.6,0x333b4a);sp(-3.5,1.5,rc())}
+else{f(-2,-1,3.4,.12,5.6,0x7b2cff,0x2a1066);f(2,-1,3.4,.12,5.6,0x2bd6ff,0x0a4466);f(0,-5,4,1.2,1.2,0x111111);f(-4.6,-5,1.2,2.4,1.2,0x111111);f(4.6,-5,1.2,2.4,1.2,0x111111);f(-5,2.5,1,1.2,5,0x3a2a5a,0x110a22);sp(0,-5.9,0xff2bd6);sp(-3.6,2.5,0xffffff);for(const q of[[-2.5,-2],[-1,0],[1.5,-1.5],[3,.5],[0,-2.8]])sp(q[0],q[1],rc(),"dance")}}
+function sign(t,c,x,y,z){const cv=document.createElement("canvas");cv.width=256;cv.height=96;const g=cv.getContext("2d");g.fillStyle="#111";g.fillRect(0,0,256,96);g.fillStyle=c;g.font="900 56px sans-serif";g.textAlign="center";g.textBaseline="middle";g.fillText(t,128,50);const m=new THREE.Mesh(new THREE.PlaneGeometry(8,3),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv)}));m.position.set(x,y,z);scene.add(m)}
+box(240,.2,240,0x8d9a85,0,-.1,0);box(240,.1,14,0x2c2f33,0,.03,0);box(14,.1,110,0x2c2f33,0,.04,-8);
+for(let i=-110;i<=110;i+=10){box(4,.05,.3,0xffffff,i,.1,0);if(Math.abs(i)<48)box(.3,.05,4,0xffffff,0,.1,i)}
+box(240,.2,20,0xe8d6a0,0,.03,56);box(260,.2,60,0x2a7fc4,0,.04,96);
+const cols=[0xd9b38c,0xc96f5a,0xe3d5c3,0x8aa6c1,0xb7c9a8,0xe0a96d];
+for(const x of[-53,-35,-17,17,35,53])for(const z of[-35,-17,17,35]){if(z==-17&&(Math.abs(x)==17||x==-35))continue;bld(x,z,R(11,13),R(11,13),0,cols[Math.floor(R(0,6))])}
+bld(-35,-17,12,12,7,0x5d7fb8,0,"office");bld(-17,-17,12,12,8,0xc9b26b,0,"bank");sign("BANK","#f2b705",-17,6.4,-10.7);
+bld(17,-17,12,12,8,0x3a1f5c,0x1a0a33,"club");box(10,.4,.2,0xff2bd6,17,4.6,-10.6,0xff2bd6);sign("CLUB","#ff2bd6",17,6.4,-10.7);
+for(let i=-70;i<=70;i+=24)for(const s of[-8.5,8.5]){box(.3,6,.3,0x333333,i,3,s);box(.9,.5,.9,0xffe9a0,i,6.2,s,0xffe9a0)}
+for(const x of[-50,-30,-10,12,34,55]){const t=new THREE.Mesh(new THREE.CylinderGeometry(.3,.4,6),M(0x8a6a3c));t.position.set(x,3,R(50,60));scene.add(t);const l=new THREE.Mesh(new THREE.ConeGeometry(3,1.6,7),M(0x2e9b4a));l.position.set(t.position.x,6.2,t.position.z);scene.add(l)}
+function limb(g,w,h,c,x,y,col){const p=new THREE.Group();p.position.set(x,y,0);const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,.4),M(c));m.position.y=-h/2;p.add(m);g.add(p);return p}
+function human(shirt,pants,mask){const g=new THREE.Group(),b=(w,h,d,c,y)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c));m.position.y=y;g.add(m)};b(1,1.3,.6,shirt,2);b(.7,.7,.7,0xc68a5a,3.05);if(mask)b(.74,.25,.74,0x111111,3.1);g.lL=limb(g,.4,1.3,pants,-.25,1.3);g.lR=limb(g,.4,1.3,pants,.25,1.3);g.aL=limb(g,.3,1.2,shirt,-.65,2.6);g.aR=limb(g,.3,1.2,shirt,.65,2.6);scene.add(g);return g}
+function car(c,police){const g=new THREE.Group(),b=(w,h,d,col,x,y,z,e)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(col,e));m.position.set(x,y,z);g.add(m);return m};b(2.2,1,4.4,c,0,1,0);b(1.9,.9,2.2,police?0xffffff:c,0,1.9,-.2);b(1.95,.5,.1,0x223344,0,1.95,.95);if(!police)b(2.25,.3,4.4,0x111111,0,1.1,0);for(const x of[-1.1,1.1])for(const z of[-1.4,1.4]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.4,10),M(0x111111));w.rotation.z=Math.PI/2;w.position.set(x,.5,z);g.add(w)}
+if(police){g.s1=b(.8,.3,.5,0xd64545,-.5,2.5,-.2,0xd64545);g.s2=b(.8,.3,.5,0x3a7bd5,.5,2.5,-.2,0x1a3a73)}scene.add(g);return g}
+let P=human(0x2b2b33,0x1a1a22,true);P.position.set(0,0,12);
+const dsc=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,.1,20),new THREE.MeshBasicMaterial({color:0xf2b705}));dsc.position.y=.15;P.add(dsc);
+function pickT(n){if(n.reg=="beach"){n.tx=R(-60,60);n.tz=R(48,61)}else if(Math.random()<.5){n.tx=R(-68,68);n.tz=(Math.random()<.5?-1:1)*R(7.8,9.6)}else{n.tx=(Math.random()<.5?-1:1)*R(7.8,9.6);n.tz=R(-60,44)}}
+function rest(g){g.lL.rotation.x=g.lR.rotation.x=g.aL.rotation.x=g.aR.rotation.x=0}
+function walker(reg,sh,pn){const g=human(sh,pn||0x2a3140,false),n={g,k:"walk",reg,ph:R(0,6),wait:0};pickT(n);g.position.set(n.tx,0,n.tz);pickT(n);npcs.push(n)}
+for(let i=0;i<12;i++)walker("st",SH[i%8]);for(let i=0;i<4;i++)walker("beach",SH[(i+3)%8],0x2a7fc4);for(let i=0;i<2;i++)walker("st",0x2d5fb0,0x1a2a4a);
+const traffic=[];for(let i=0;i<6;i++){const h=i<4,d=i%2?1:-1,g=car(0xf2b705,false);traffic.push({g,h,d,v:R(8,12),o:R(-80,80),l:h?(d>0?-3.5:3.5):(d>0?3.5:-3.5)})}
+const zones=[{x:-17,z:-15.2,n:"bank",r:"thief",t:"Rob the bank",c:0xf2b705},{x:17,z:-13.8,n:"club",t:"Enter club "+N(15000),c:0xff2bd6},{x:0,z:52,n:"beach",t:"Relax "+N(2000),c:0x39c6ff}];
+const stops=[-45,0,45];stops.forEach(x=>zones.push({x,z:7.6,n:"stop",t:"Danfo stop",c:0xf2b705}));
+[[30,8.8,"rent","thief",4,0xff6fae],[30,8.8,"rent","civilian",3,0xff6fae],[30,52,"okoro","thief",5,0x6aa7ff],[30,52,"chief","police",4,0x6aa7ff],[30,52,"tempt","civilian",4,0x6aa7ff],[-35,-9.2,"hq","police",[0,3],0x6aa7ff],[-55,8.2,"stall","civilian",undefined,0xe08a2e],[50,8.2,"stock","civilian",1,0xe08a2e]].forEach(a=>zones.push({x:a[0],z:a[1],n:a[2],r:a[3],ch:a[4],c:a[5],t:{okoro:"Meet Okoro",chief:"Meet the Chief",tempt:"Meet Chidi",hq:"Report at HQ",stock:"Buy stock "+N(20000)}[a[2]]||""}));
+box(4,1,1.6,0x8b5a2b,-55,.5,9.8);box(5,.2,3.2,0xe08a2e,-55,3.2,9.8);box(.2,3,.2,0x333333,-57.2,1.5,8.4);box(.2,3,.2,0x333333,-52.8,1.5,8.4);for(const q of[-56,-55,-54])box(.7,.5,.7,0xd64545,q,1.25,9.8);
+const au=human(0xffffff,0x3b4a66,false);au.position.set(-55,.1,11);au.rotation.y=Math.PI;npcs.push({g:au,k:"idle",ph:1});sign("POLICE","#6aa7ff",-35,6,-10.2);
+for(const z of zones){const m=new THREE.Mesh(new THREE.CylinderGeometry(2.6,2.6,.15,24),new THREE.MeshBasicMaterial({color:z.c,transparent:true,opacity:.55}));m.position.set(z.x,.2,z.z);scene.add(m);z.m=m}
+const G={camH:40,open:0,cash:10000,stress:20,stam:100,wanted:0,cd:0,tt:1.2,run:false,cops:[],low:0,bump:0};
+G.car={g:car(0x2a7fe0,false),x:5.8,z:16,h:Math.PI,v:0};G.car.g.position.set(5.8,0,16);G.car.g.rotation.y=Math.PI;G.mode="walk";G.ch=0;G.f={};G.dlg=0;
+const bus={g:car(0xf2b705,false),x:-85,dw:0,last:-1,cur:0};bus.g.scale.set(1.2,1.4,1.5);
+const OBJ={thief:["Ride the danfo from the west stop to the centre stop.","Scout the bank. Walk inside the gold building.","Rob the bank. Get the cash for Mama's rent.","Escape the police. The blue car is faster than you.","Pay the landlord "+N(250000)+" at the pink gate.","Meet Officer Okoro at the beach, the blue gate."],
+police:["Report to Police HQ (blue POLICE sign, north street).","Answer the bank alarm. Get to the bank.","Catch the suspect running from the bank.","Return to Police HQ.","Meet Chief Balogun at the beach, the blue gate."],
+civilian:["Go to your market stall (orange awning, west street).","Take the danfo to the east stop and buy stock.","Sell your stock at the stall. Five sales.","Pay the landlord "+N(60000)+" at the pink gate.","Chidi wants to meet you at the beach, the blue gate."]};
+function setObj(){$("#obj").textContent=OBJ[G.role][G.ch]||"Story complete. Keep exploring Lagos."}
+function dlg(sp,tx,ch){G.dlg=1;$("#dlg").style.display="flex";$("#dsp").textContent=sp;$("#dtx").textContent=tx;const c=$("#dch");c.innerHTML="";(ch||[["Continue"]]).forEach(o=>{const b=document.createElement("button");b.textContent=o[0];b.onclick=()=>{$("#dlg").style.display="none";G.dlg=0;o[1]&&o[1]()};c.appendChild(b)})}
+function end(t){G.ch=9;setObj();dlg("Epilogue",t,[["Draw a new life",()=>location.reload()],["Keep playing"]])}
+function tunde(){dlg("Tunde","Oga, take me with you next time. Or make I go back to school?",[["Pay his school fees "+N(50000),()=>{G.cash=Math.max(0,G.cash-50000);G.f.tunde="school";dlg("Officer Okoro (phone)","I saw the bank cameras. Meet me at the beach, the blue gate. Come alone.")}],["Let him work with you",()=>{G.f.tunde="crew";dlg("Officer Okoro (phone)","I saw the bank cameras. Meet me at the beach, the blue gate. Come alone.")}]])}
+function spawnCops(){G.wanted=1;G.tt=40;G.low=0;for(const q of[-1,1]){const c=car(0xffffff,true);c.position.set(q*75,0,q*2);G.cops.push(c)}}
+function thiefEnd(){const f=G.f;end("Rent is paid and the landlord is quiet. "+(f.mama=="truth"?"Mama knows the truth and prays for you every night. ":"Mama thinks you are a trader and sleeps well. ")+(f.tunde=="school"?"Tunde is back in school, proud of you. ":"Tunde now runs errands for you, and the street is watching him. ")+(f.o=="paid"?"Okoro took his money and looked away, for now. ":"Okoro is on your trail and the sirens will not stop. ")+"Lagos never sleeps. Neither do you.")}
+function okoro(){dlg("Officer Okoro","I know about the bank job. "+N(100000)+" and I forget your name. Or you try your luck with my boys.",[["Pay "+N(100000),()=>{if(G.cash<100000){G.f.o="run";spawnCops()}else{G.cash-=100000;G.f.o="paid"}thiefEnd()}],["Refuse and run",()=>{G.f.o="run";spawnCops();thiefEnd()}]])}
+function spawnSus(){const g=human(0x2b2b33,0x1a1a22,true);g.position.set(-17,0,-8.6);const d=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.2,.1,16),new THREE.MeshBasicMaterial({color:0xd64545}));d.position.y=.15;g.add(d);G.sus={g,t:70,ph:0}}
+function fin(x){scene.remove(G.sus.g);G.sus=null;G.f.s=x;if(x=="arrest")G.cash+=20000;if(x=="shot")G.stress=Math.min(100,G.stress+30);adv()}
+function confront(){dlg("Suspect","Officer, please! I have a family. I have not hurt anybody.",[["Arrest him",()=>fin("arrest")],["Shoot",()=>fin("shot")],["Let him go",()=>fin("freed")]])}
+function endPolice(){const f=G.f;end((f.s=="arrest"?"You arrested the thief and the case closed. ":f.s=="shot"?"The suspect died and Internal Affairs is watching you. ":"The suspect vanished into the night. ")+(f.c=="took"?"You took the Chief's money and the uniform feels heavier. ":"You refused the Chief and made a powerful enemy. ")+"Lagos needs honest officers, and it tests them every day.")}
+function chief(){dlg("Chief Balogun","Officer, bank cameras can have bad days. "+N(150000)+" and the evidence goes missing.",[["Take the money",()=>{G.cash+=150000;G.f.c="took";endPolice()}],["Refuse",()=>{G.f.c="refused";endPolice()}]])}
+function chidi(){dlg("Chidi (phone)","Come to the beach, the blue gate. I get better money for you.")}
+function endCiv(){const f=G.f;end("The rent is paid and the stall is still yours. "+(f.share?"The neighbour you helped brings you free pepper. ":"")+(f.c=="took"?"Chidi's money bought you comfort, but he knows where you live now.":"You turned Chidi down and kept your honest hustle. It is slow, but you sleep well."))}
+function tempt(){dlg("Chidi","Carry one bag to the club. "+N(200000)+". No questions.",[["Take the job",()=>{G.cash+=200000;G.f.c="took";G.stress=Math.min(100,G.stress+25);endCiv()}],["Refuse",()=>{G.f.c="refused";endCiv()}]])}
+const STORY={thief:[()=>dlg("Tunde (phone)","You reach! Listen. The bank on the north street. The vault door is weak. Go and see inside. It is the gold building."),
+()=>dlg("Tunde (phone)","You see am? One guard, two tellers, and the vault behind the counter. The blue car by the road is for your getaway. Do it fast."),
+()=>dlg("Tunde (phone)","Sirens! Run or drive. Take the blue car. Lose them!"),
+()=>dlg("Mama (phone)","My child, the landlord is at the gate asking for "+N(250000)+". The pink gate on the east side. Please come."),
+()=>dlg("Mama","Thank you, my child. But where did this money come from?",[["It is from trading",()=>{G.f.mama="lie";tunde()}],["I will tell you the truth",()=>{G.f.mama="truth";tunde()}]])],
+police:[()=>dlg("Inspector Adebayo","Alarm at the bank! Go there now. Walk or take your patrol car."),
+()=>{spawnSus();dlg("Dispatch","The suspect ran out the back! Catch him. Get close and confront him.")},
+()=>dlg("Inspector Adebayo",{arrest:"Good arrest. Come back to HQ for your statement.",shot:"A man is dead. Come to HQ. Internal Affairs will ask questions.",freed:"You let him go. Come to HQ and explain yourself.",escaped:"He got away. Come to HQ and explain yourself."}[G.f.s]),
+()=>dlg("Chief Balogun (phone)","Officer, we should talk. Meet me at the beach, the blue gate. Come alone.")],
+civilian:[()=>dlg("Aunty Ngozi","Business is slow because of the fuel scarcity. Take the danfo to the east stop and buy stock from the wholesaler. "+N(20000)+" a bag."),
+()=>{G.sold=0;dlg("Wholesaler","Take am. Fresh tomatoes and pepper. Go and sell, five good sales.")},
+()=>dlg("Mama (phone)","I am proud of you, my child. The landlord is at the pink gate for "+N(60000)+"."),
+()=>dlg("Neighbour","Please, my children have not eaten today. Can you spare "+N(10000)+"?",[["Share "+N(10000),()=>{G.cash=Math.max(0,G.cash-10000);G.f.share=1;chidi()}],["Keep it",chidi]])]};
+function adv(){const i=G.ch;G.ch++;setObj();const q=STORY[G.role][i];q&&q()}
+function special(z){const n=z.n;
+ if(n=="car"){G.mode="car";P.visible=false;G.car.v=0;toast("Driving. The stick steers, Run boosts.");return 1}
+ if(n=="exit"){G.mode="walk";P.visible=true;P.position.set(G.car.x+3,0,G.car.z);push(P.position,.9);return 1}
+ if(n=="off"){G.mode="walk";P.visible=true;P.position.set(stops[bus.cur],0,8.6);if(G.role=="thief"&&G.ch==0&&bus.cur==1)adv();return 1}
+ if(n=="stop"){if(!(bus.dw>0&&Math.abs(bus.x-z.x)<8))return 1;if(G.cash<300){toast("You need "+N(300)+" for the fare.");return 1}G.cash-=300;G.mode="bus";P.visible=false;toast("Boarded the danfo. Get off at a stop.");return 1}
+ if(n=="rent"){if(G.cash<G.rent){toast("You need "+N(G.rent)+(G.role=="thief"?". Rob the bank again.":". Sell more goods."));return 1}G.cash-=G.rent;adv();return 1}
+ if(n=="stall"){if(G.ch==0){adv();return 1}if(G.ch==1){toast("Buy stock from the wholesaler first.");return 1}if(G.cd2>0){toast("Wait for the next customer.");return 1}const m=Math.round(R(9000,16000));G.cash+=m;G.cd2=3;G.stress=Math.min(100,G.stress+3);G.sold=(G.sold||0)+1;toast("Sold goods: "+N(m)+".");if(G.ch==2&&G.sold>=5)adv();return 1}
+ if(n=="stock"){if(G.cash<20000){toast("You need "+N(20000)+" for stock.");return 1}G.cash-=20000;adv();return 1}
+ if(n=="hq"){adv();return 1}
+ if(n=="conf"){confront();return 1}
+ if(n=="chief"){chief();return 1}if(n=="tempt"){tempt();return 1}if(n=="okoro"){okoro();return 1}return 0}
+const INTRO={thief:["Tunde (phone)","Oga! Mama's landlord wants "+N(250000)+" by Friday or we are out. I know one way. Meet me at the centre stop. Take the yellow danfo from the west stop."],police:["Inspector Adebayo","New officer, welcome. Report to HQ on the north street, the building with the blue POLICE sign. Walk or take your patrol car."],civilian:["Mama","My child, rent is "+N(60000)+" this month and the stall is quiet. Go to your market stall, the orange awning on the west street, and open for business."]};
+function roleSetup(){const r=G.role;G.cash={thief:10000,police:30000,civilian:35000}[r];G.rent=r=="thief"?250000:60000;scene.remove(P);const c={thief:[0x2b2b33,0x1a1a22,true],police:[0x2d5fb0,0x1a2a4a,false],civilian:[0xe08a2e,0x3b4a66,false]}[r];P=human(c[0],c[1],c[2]);P.position.set(0,0,12);const d=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,.1,20),new THREE.MeshBasicMaterial({color:0xf2b705}));d.position.y=.15;P.add(d);
+ if(r=="police"){const h=new THREE.Mesh(new THREE.BoxGeometry(.8,.25,.8),M(0x1a3a73));h.position.y=3.5;P.add(h);scene.remove(G.car.g);const g=car(0xffffff,true);g.position.set(5.8,0,16);g.rotation.y=Math.PI;G.car.g=g}
+ if(r=="civilian"){G.car.g.visible=false;G.car.x=G.car.z=999}}
+const arrow=new THREE.Group(),am=new THREE.MeshBasicMaterial({color:0xffd23f,depthTest:false}),ac=new THREE.Mesh(new THREE.ConeGeometry(1.6,2.6,4),am),as=new THREE.Mesh(new THREE.BoxGeometry(.9,.4,2.4),am);
+ac.rotation.x=Math.PI/2;ac.position.z=2.4;as.position.z=.2;ac.renderOrder=as.renderOrder=99;arrow.add(ac,as);scene.add(arrow);
+const beam=new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,70,16,1,true),new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:.28,depthWrite:false,side:THREE.DoubleSide}));beam.position.y=35;scene.add(beam);
+function target(){const r=G.role,c=G.ch,p=P.position,pt=(x,z)=>({x,z}),d2=(x,z)=>Math.hypot(p.x-x,p.z-z);
+ if(!r||G.dlg||c>=OBJ[r].length)return null;
+ if(r=="thief"){if(c==0)return pt(G.mode=="bus"?0:-45,7.6);if(c<3)return pt(-17,-15);if(c==3)return G.mode=="car"?null:pt(G.car.x,G.car.z);return c==4?pt(30,8.8):pt(30,52)}
+ if(r=="police"){if(c==0||c==3)return pt(-35,-9.2);if(c==1)return pt(-17,-12);if(c==2)return G.sus?pt(G.sus.g.position.x,G.sus.g.position.z):null;return pt(30,52)}
+ if(c==0||c==2)return pt(-55,8.2);if(c==1){if(G.mode=="bus")return pt(45,7.6);return d2(50,8.2)<30?pt(50,8.2):pt(stops.reduce((b,x)=>d2(x,7.6)<d2(b,7.6)?x:b,stops[0]),7.6)}return c==3?pt(30,8.8):pt(30,52)}
+const keys={},joy={x:0,y:0};let jid=null,ph=0,face=0,on=false;
+const base=$("#joy"),knob=$("#knob");
+function mv(e){const r=base.getBoundingClientRect(),R2=r.width/2;let dx=e.clientX-r.left-R2,dy=e.clientY-r.top-R2;const m=Math.hypot(dx,dy);if(m>R2){dx*=R2/m;dy*=R2/m}joy.x=dx/R2;joy.y=dy/R2;knob.style.transform=`translate(${dx}px,${dy}px)`}
+base.addEventListener("pointerdown",e=>{jid=e.pointerId;base.setPointerCapture(jid);mv(e)});base.addEventListener("pointermove",e=>{if(e.pointerId===jid)mv(e)});
+const rel=e=>{jid=null;joy.x=joy.y=0;knob.style.transform="none"};base.addEventListener("pointerup",rel);base.addEventListener("pointercancel",rel);
+const rb=$("#run");rb.addEventListener("pointerdown",()=>G.run=true);rb.addEventListener("pointerup",()=>G.run=false);rb.addEventListener("pointerleave",()=>G.run=false);
+addEventListener("keydown",e=>{keys[e.code]=1;if(e.code=="KeyE"||e.code=="Space")act()});addEventListener("keyup",e=>keys[e.code]=0);
+function toast(t){const e=$("#toast");e.textContent=t;e.style.opacity=1;clearTimeout(toast.k);toast.k=setTimeout(()=>e.style.opacity=0,3200)}
+function near(){if(G.sus&&G.mode=="walk"&&Math.hypot(P.position.x-G.sus.g.position.x,P.position.z-G.sus.g.position.z)<3.3)return{n:"conf",t:"Confront suspect"};
+ if(G.mode=="car")return{n:"exit",t:"Exit car"};if(G.mode=="bus")return bus.dw>0?{n:"off",t:"Get off danfo"}:null;
+ if(Math.hypot(P.position.x-G.car.x,P.position.z-G.car.z)<4)return{n:"car",t:G.role=="police"?"Enter patrol car":"Enter car"};
+ for(const z of zones)if((z.r===undefined||z.r===G.role)&&(z.ch===undefined||[].concat(z.ch).includes(G.ch))&&Math.hypot(P.position.x-z.x,P.position.z-z.z)<3.4){
+  if(z.n=="stop")return{...z,t:bus.dw>0&&Math.abs(bus.x-z.x)<8?"Board danfo "+N(300):"Waiting for danfo..."};
+  if(z.n=="rent")return{...z,t:"Pay rent "+N(G.rent)};if(z.n=="stall")return{...z,t:G.ch==0?"Open your stall":G.ch==1?"Stall (need stock)":"Sell goods"};return z}}
+function act(){if(!on||G.dlg)return;const z=near();if(!z)return;if(special(z))return;
+ if(z.n=="bank"){if(G.ch<2)return toast("Not yet. Scout the bank first.");if(G.cd>0)return toast("The vault is empty. Come back later.");if(G.wanted)return;let l=Math.round(R(200000,600000));if(G.ch==2)l=Math.round(R(320000,520000));G.cash+=l;G.cd=30;G.stress+=15;G.wanted=1;G.tt=40;G.low=0;toast("You took "+N(l)+". Sirens! Survive 40 seconds.");if(G.ch==2)adv();for(const s of[-1,1]){const c=car(0xffffff,true);c.position.set(s*75,0,s*2);G.cops.push(c)}}
+ else if(G.wanted)toast("Not now. The police are on you!");
+ else if(z.n=="club"){if(G.cash<15000)return toast("You cannot afford the club.");G.cash-=15000;G.stress-=25;toast("Great night. Stress down.")}
+ else{if(G.cash<2000)return toast("You cannot afford it.");G.cash-=2000;G.stress-=15;toast("The sea breeze helps.")}
+ G.stress=Math.max(0,Math.min(100,G.stress))}
+$("#act").addEventListener("pointerdown",act);
+$("#rf").addEventListener("click",()=>{G.open=!G.open;$("#rf").textContent=G.open?"Close roofs":"Open roofs";toast(G.open?"Roofs open. Look inside every building.":"Roofs closed.")});
+$("#zm").addEventListener("click",()=>{const l=[26,40,60];G.camH=l[(l.indexOf(G.camH)+1)%3]});
+function push(p,r){for(const o of obs){const dx=p.x-o.x,dz=p.z-o.z,ox=o.hw+r-Math.abs(dx),oz=o.hd+r-Math.abs(dz);if(ox>0&&oz>0){if(ox<oz)p.x+=dx>0?ox:-ox;else p.z+=dz>0?oz:-oz}}p.x=Math.max(-72,Math.min(72,p.x));p.z=Math.max(-72,Math.min(63,p.z))}
+function caught(){G.mode="walk";P.visible=true;G.car.x=5.8;G.car.z=16;G.car.h=Math.PI;G.car.v=0;G.car.g.position.set(5.8,0,16);G.car.g.rotation.y=Math.PI;if(G.ch==3){G.ch=2;setObj()}G.cash=Math.floor(G.cash/2);G.wanted=0;G.cops.forEach(c=>scene.remove(c));G.cops=[];P.position.set(0,0,12);G.stress=Math.min(100,G.stress+20);toast("Arrested! Family bailed you out. You lost half your cash.")}
+function update(dt){
+ let ix=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+joy.x,iz=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0)+joy.y;const m=Math.hypot(ix,iz),run=G.run||keys.ShiftLeft;
+ if(G.mode=="walk"&&m>.12){const k=Math.min(1,m);ix/=m;iz/=m;let sp=5.2;if(run&&G.stam>0){sp=9.5;G.stam-=18*dt}P.position.x+=ix*sp*k*dt;P.position.z+=iz*sp*k*dt;push(P.position,.9);const t=Math.atan2(ix,iz);let d=t-face;d=Math.atan2(Math.sin(d),Math.cos(d));face+=d*Math.min(1,12*dt);P.rotation.y=face;ph+=dt*(sp>6?14:9);const s=Math.sin(ph)*(sp>6?1.1:.7);P.lL.rotation.x=s;P.lR.rotation.x=-s;P.aL.rotation.x=-s;P.aR.rotation.x=s}else{P.lL.rotation.x=P.lR.rotation.x=P.aL.rotation.x=P.aR.rotation.x=0}
+ if(!(run&&m>.12))G.stam=Math.min(100,G.stam+14*dt);G.cd=Math.max(0,G.cd-dt);
+ if(G.mode=="car"){const c=G.car;if(m>.15){const th=Math.atan2(ix/m,iz/m);let d=th-c.h;d=Math.atan2(Math.sin(d),Math.cos(d));c.h+=d*Math.min(1,4*dt)}const sp=m>.15?(run?20:13)*Math.min(1,m):0;c.v+=(sp-c.v)*Math.min(1,2.5*dt);c.x+=Math.sin(c.h)*c.v*dt;c.z+=Math.cos(c.h)*c.v*dt;const q={x:c.x,z:c.z};push(q,2.2);if(Math.hypot(q.x-c.x,q.z-c.z)>.05)c.v*=.6;c.x=q.x;c.z=q.z;c.g.position.set(c.x,0,c.z);c.g.rotation.y=c.h;P.position.set(c.x,0,c.z)}
+else if(G.mode=="bus")P.position.set(bus.x,0,3.5);
+if(bus.dw>0)bus.dw-=dt;else{bus.x+=11*dt;stops.forEach((q,i)=>{if(Math.abs(bus.x-q)<.7&&bus.last!=i){bus.last=i;bus.cur=i;bus.dw=6}});if(bus.x>85){bus.x=-85;bus.last=-1}}bus.g.position.set(bus.x,0,3.5);bus.g.rotation.y=Math.PI/2;
+if(G.ch==1&&(G.role=="thief"||G.role=="police")&&Math.abs(P.position.x+17)<5&&Math.abs(P.position.z+17)<5)adv();
+G.cd2=Math.max(0,(G.cd2||0)-dt);
+if(G.sus){const u=G.sus,g=u.g,dx=g.position.x-P.position.x,dz=g.position.z-P.position.z,d=Math.hypot(dx,dz)||1;u.t-=dt;if(d<45){g.position.x+=dx/d*4.6*dt;g.position.z+=dz/d*4.6*dt;push(g.position,.8);g.rotation.y=Math.atan2(dx,dz);u.ph+=dt*9;const w3=Math.sin(u.ph)*.7;g.lL.rotation.x=w3;g.lR.rotation.x=-w3;g.aL.rotation.x=-w3;g.aR.rotation.x=w3}else rest(g);if(u.t<=0){scene.remove(g);G.sus=null;G.f.s="escaped";adv()}}
+for(const t of traffic){t.o+=t.d*t.v*dt;if(t.o>85)t.o=-85;if(t.o<-85)t.o=85;const g=t.g;if(t.h){g.position.set(t.o,0,t.l);g.rotation.y=t.d>0?Math.PI/2:-Math.PI/2}else{g.position.set(t.l,0,t.o);g.rotation.y=t.d>0?0:Math.PI}
+  const dx=P.position.x-g.position.x,dz=P.position.z-g.position.z;if(Math.hypot(dx,dz)<2.8&&G.bump<=0){G.bump=1.5;const l=Math.hypot(dx,dz)||1;P.position.x+=dx/l*4;P.position.z+=dz/l*4;G.stress=Math.min(100,G.stress+6);toast("Mind the danfo!")}}
+ G.bump-=dt;
+ if(G.wanted){G.tt-=dt;let md=999;for(const c of G.cops){const dx=P.position.x-c.position.x,dz=P.position.z-c.position.z,d=Math.hypot(dx,dz);md=Math.min(md,d);const cs=G.mode=="car"?10.5:G.mode=="bus"?11:6.6;c.position.x+=dx/d*cs*dt;c.position.z+=dz/d*cs*dt;push(c.position,2);c.rotation.y=Math.atan2(dx,dz);const f=Math.floor(performance.now()/180)%2;c.s1.material.emissive.setHex(f?0xd64545:0);c.s2.material.emissive.setHex(f?0:0x3a7bd5)}
+  if(md<2.4)caught();else if(md>55)G.low+=dt;else G.low=0;
+  if(G.wanted&&(G.tt<=0||G.low>3)){G.wanted=0;G.cops.forEach(c=>scene.remove(c));G.cops=[];toast("You lost them. Heat cooling down.");if(G.role=="thief"&&G.ch==3)adv()}}
+ const nw=performance.now()/1000;
+ for(const r of roofs){const o=G.open||(Math.abs(P.position.x-r.x)<r.hw+4&&Math.abs(P.position.z-r.z)<r.hd+4),ty=o?r.h+16:r.h+.25;r.m.position.y+=(ty-r.m.position.y)*Math.min(1,5*dt);r.m.visible=r.m.position.y<r.h+13}
+ for(const n of npcs){const g=n.g;
+  if(n.k=="walk"){if(n.wait>0){n.wait-=dt;rest(g)}else{const dx=n.tx-g.position.x,dz=n.tz-g.position.z,d=Math.hypot(dx,dz);if(d<1){n.wait=R(1,5);pickT(n)}else{g.position.x+=dx/d*2.3*dt;g.position.z+=dz/d*2.3*dt;push(g.position,.6);g.rotation.y=Math.atan2(dx,dz);n.ph+=dt*8;const w2=Math.sin(n.ph)*.6;g.lL.rotation.x=w2;g.lR.rotation.x=-w2;g.aL.rotation.x=-w2;g.aR.rotation.x=w2}}}
+  else if(n.k=="dance"){n.ph+=dt*6;g.position.y=.1+Math.abs(Math.sin(n.ph))*.5;g.aL.rotation.x=g.aR.rotation.x=-2.6+Math.sin(n.ph*2)*.5;g.rotation.y+=dt*1.5}
+  else{rest(g);g.aR.rotation.x=Math.sin(nw*2+n.ph)*.15;g.rotation.y+=Math.sin(nw*.7+n.ph)*.004}}
+ const z=near(),a=$("#act");if(z&&on){a.style.display="block";a.textContent=z.t}else a.style.display="none";
+ zones.forEach(q=>{q.m.visible=(q.r===undefined||q.r===G.role)&&(q.ch===undefined||[].concat(q.ch).includes(G.ch));q.m.material.opacity=.4+.25*Math.sin(performance.now()/300)});
+ const k=(Math.sin(performance.now()/40000)+1)/2,sky=new THREE.Color(0x0b1530).lerp(new THREE.Color(0x8fd0ff),.25+.75*k);scene.background=sky;scene.fog.color.copy(sky);hemi.intensity=.4+.5*k;sun.intensity=.3+.6*k;
+ const ch=G.camH;cam.position.x+=(P.position.x-cam.position.x)*Math.min(1,5*dt);cam.position.z+=(P.position.z+ch*.28-cam.position.z)*Math.min(1,5*dt);cam.position.y+=(ch-cam.position.y)*Math.min(1,4*dt);cam.lookAt(cam.position.x,0,cam.position.z-ch*.28);
+ const tg=target();if(tg){const dx=tg.x-P.position.x,dz=tg.z-P.position.z,d=Math.hypot(dx,dz)||1;arrow.visible=d>7;arrow.position.set(P.position.x+dx/d*5,10+Math.sin(performance.now()/250)*.6,P.position.z+dz/d*5);arrow.rotation.y=Math.atan2(dx,dz);beam.visible=true;beam.position.x=tg.x;beam.position.z=tg.z;const ot=OBJ[G.role][G.ch]+" ("+Math.round(d)+" m)";if(ot!==G.ot){G.ot=ot;$("#obj").textContent=ot}}else{arrow.visible=false;beam.visible=false;if(G.ot){G.ot=null;setObj()}}
+ $("#cash").textContent=N(G.cash);$("#st").style.width=G.stress+"%";$("#sp").style.width=G.stam+"%";const w=$("#wanted");w.style.display=G.wanted?"block":"none";w.textContent="Wanted "+Math.ceil(G.tt)+"s"}
+let last=performance.now();cam.position.set(0,40,23);
+function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1000);last=t;if(on&&!G.dlg)update(dt);rd.render(scene,cam)}
+loop(last);
+$("#go").addEventListener("click",()=>{if(G.role){$("#start").style.display="none";on=true;setObj();dlg(...INTRO[G.role]);return}
+ const w=["mini","mini","manimo","..."],h=$("#start h1");let t="";$("#go").style.display="none";w.forEach((x,i)=>setTimeout(()=>{t+=x+" ";h.textContent=t},i*600));
+ setTimeout(()=>{const q=Math.random();G.role=q<.3?"thief":q<.6?"police":"civilian";roleSetup();h.textContent="You are "+{thief:"a Thief",police:"a Police officer",civilian:"a Civilian"}[G.role];const ps=document.querySelectorAll("#start p");ps[0].textContent={thief:"Street life. Money is quick and so are sirens.",police:"You wear the uniform. Everybody expects something from you.",civilian:"Rent is due and the stall is quiet. Make ends meet."}[G.role];ps[1].textContent="Your role was drawn. You cannot choose it.";const b=$("#go");b.textContent="Start this life";b.style.display=""},w.length*600+300)});
+addEventListener("resize",()=>{rd.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+}
+</script></body></html>
